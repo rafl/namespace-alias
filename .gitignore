@@ -13,6 +13,6 @@ Debian*
 README
 namespace-alias-*
 *.bs
-alias.*
+/alias.*
 !alias.xs
 ppport.h
