@@ -66,7 +66,7 @@ check_alias (pTHX_ OP *op, void *cb)
 
     replacement = invoke_callback (aTHX_ cb, name);
 
-    SvREFCNT_dec (cSVOPx (op)->op_sv);
+    SvREFCNT_dec (name);
     cSVOPx (op)->op_sv = replacement;
 
     return op;
