@@ -34,14 +34,14 @@ is MyAlias->met(), 'Foo::Bar::Baz', 'aliased method call';
 
 # might this be possible?
 sub giveback { $_[0] }
-#is giveback(MyAlias), 'Foo::Bar::Baz', 'aliased bareword';
+is giveback(MyAlias), 'Foo::Bar::Baz', 'aliased bareword';
 
 # sub packages
 is MyAlias::Qux->fun, 'fun2', 'aliased function call in sub package';
 is MyAlias::Qux->met, 'Foo::Bar::Baz::Qux', 'aliased method call in sub package';
 
 # not a function, so look for package?
-#is giveback(MyAlias::Qux), 'Foo::Bar::Baz::Qux', 'aliased sub package bareword';
+is giveback(MyAlias::Qux), 'Foo::Bar::Baz::Qux', 'aliased sub package bareword';
 
 # method name lookups
 is "string"->MyAlias::Qux::met(), 'string', 'aliased method dispatch';
