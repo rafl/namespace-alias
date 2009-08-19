@@ -15,4 +15,3 @@ namespace-alias-*
 *.bs
 /alias.*
 !alias.xs
-ppport.h
