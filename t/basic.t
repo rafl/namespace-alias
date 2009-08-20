@@ -51,4 +51,7 @@ is_deeply { MyAlias => 42 }, { 'MyAlias', 42 }, 'no mangling of fat commas';
 is_deeply { MyAlias
 => 42 }, { 'MyAlias', 42 }, 'no mangling of fat commas, even not directly following the bareword';
 
+is_deeply { MyAlias=>
+42 }, { 'MyAlias', 42 }, 'another fat comma corner case';
+
 done_testing;
