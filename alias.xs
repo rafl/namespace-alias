@@ -8,7 +8,6 @@
 
 #include "stolen_chunk_of_op.h"
 
-/* I'm fairly sure that bit isn't used for const ops yet */
 #define MG_UNSTRICT ((U16) (0xaffe))
 
 STATIC void (*real_peep) (pTHX_ OP *);
