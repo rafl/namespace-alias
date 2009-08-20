@@ -6,10 +6,12 @@
 
 #include "hook_op_check.h"
 
-/* I'm fairly sure that bit isn't used for const ops yet */
-#define OPpCONST_UNSTRICT 1
+#include "stolen_chunk_of_op.h"
 
-STATIC void (*old_peep) (pTHX_ OP *);
+/* I'm fairly sure that bit isn't used for const ops yet */
+#define MG_UNSTRICT ((U16) (0xaffe))
+
+STATIC void (*real_peep) (pTHX_ OP *);
 
 STATIC SV *
 invoke_callback (pTHX_ SV *cb, SV *name)
@@ -40,6 +42,47 @@ invoke_callback (pTHX_ SV *cb, SV *name)
     LEAVE;
 
     return ret;
+}
+
+STATIC void
+tag (OP *op)
+{
+    SV *sv;
+    MAGIC *mg;
+
+    assert (op->op_type == OP_CONST);
+
+    sv = cSVOPx (op)->op_sv;
+    mg = sv_magicext (sv, NULL, PERL_MAGIC_ext, NULL, NULL, 0);
+    mg->mg_private = MG_UNSTRICT;
+}
+
+STATIC int
+tagged (OP *op)
+{
+    SV *sv;
+    MAGIC *mg;
+
+    assert (op->op_type == OP_CONST);
+
+    sv = cSVOPx (op)->op_sv;
+    if (SvTYPE (sv) < SVt_PVMG) {
+        return 0;
+    }
+
+    for (mg = SvMAGIC(sv); mg; mg = mg->mg_moremagic) {
+        switch (mg->mg_type) {
+            case PERL_MAGIC_ext:
+                if (mg->mg_private == MG_UNSTRICT) {
+                    return 1;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    return 0;
 }
 
 STATIC OP *
@@ -77,23 +120,25 @@ check_alias (pTHX_ OP *op, void *cb)
 
     SvREFCNT_dec (name);
     cSVOPx (op)->op_sv = replacement;
-    op->op_private |= OPpCONST_UNSTRICT;
+
+    tag (op);
 
     return op;
 }
 
 void
-peep_unstrict (pTHX_ OP *op)
+peep_unstrict (pTHX_ OP *first_op)
 {
-    if (!op || op->op_opt) {
+    OP *op;
+
+    if (!first_op || first_op->op_opt) {
         return;
     }
 
-    for (; op; op = op->op_next) {
+    for (op = first_op; op; op = op->op_next) {
         switch (op->op_type) {
             case OP_CONST:
-                if (op->op_private & OPpCONST_UNSTRICT) {
-                    op->op_private &= ~OPpCONST_UNSTRICT;
+                if (tagged (op)) {
                     op->op_private &= ~OPpCONST_STRICT;
                 }
                 break;
@@ -102,7 +147,7 @@ peep_unstrict (pTHX_ OP *op)
         }
     }
 
-    old_peep (aTHX_ op);
+    real_peep (aTHX_ first_op);
 }
 
 MODULE = namespace::alias  PACKAGE = namespace::alias
@@ -113,7 +158,7 @@ hook_op_check_id
 setup (class, cb)
         SV *cb
     CODE:
-        old_peep = PL_peepp;
+        real_peep = namespace_alias_peep;
         PL_peepp = peep_unstrict;
         RETVAL = hook_op_check (OP_CONST, check_alias, newSVsv (cb));
     OUTPUT:
