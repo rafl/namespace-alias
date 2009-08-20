@@ -14,6 +14,9 @@ XSLoader::load(__PACKAGE__, $VERSION);
 sub import {
     my ($class, $package, $alias) = @_;
 
+    ($alias) = $package =~ /::(\w+)$/
+        unless defined $alias;
+
     my $hook = $class->setup(sub {
         my ($str) = @_;
 
