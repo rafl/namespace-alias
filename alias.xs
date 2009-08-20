@@ -69,7 +69,7 @@ tagged (OP *op)
         return 0;
     }
 
-    for (mg = SvMAGIC(sv); mg; mg = mg->mg_moremagic) {
+    for (mg = SvMAGIC (sv); mg; mg = mg->mg_moremagic) {
         switch (mg->mg_type) {
             case PERL_MAGIC_ext:
                 if (mg->mg_private == MG_UNSTRICT) {

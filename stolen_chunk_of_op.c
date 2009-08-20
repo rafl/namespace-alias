@@ -1,4 +1,4 @@
-#define PERL_EXT
+#define PERL_CORE
 #include "EXTERN.h"
 #include "perl.h"
 
