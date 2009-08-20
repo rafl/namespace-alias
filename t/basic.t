@@ -46,4 +46,9 @@ is giveback(MyAlias::Qux), 'Foo::Bar::Baz::Qux', 'aliased sub package bareword';
 # method name lookups
 is "string"->MyAlias::Qux::met(), 'string', 'aliased method dispatch';
 
+is_deeply { MyAlias => 42 }, { 'MyAlias', 42 }, 'no mangling of fat commas';
+
+is_deeply { MyAlias
+=> 42 }, { 'MyAlias', 42 }, 'no mangling of fat commas, even not directly following the bareword';
+
 done_testing;
