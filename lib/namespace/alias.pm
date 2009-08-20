@@ -16,8 +16,12 @@ sub import {
 
     my $hook = $class->setup(sub {
         my ($str) = @_;
-        $str =~ s/^$alias\b/$package/;
-        return $str;
+
+        if ($str =~ s/^$alias\b/$package/) {
+            return $str;
+        }
+
+        return;
     });
 
     on_scope_end {
