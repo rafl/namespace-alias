@@ -111,6 +111,16 @@ check_alias (pTHX_ OP *op, void *cb)
             break;
     }
 
+    /*
+     * We explicitly don't handle the case of
+     *
+     *   MyAlias
+     *   => 42
+     *
+     * here. We still call the alias expansion callback for that, but for some
+     * obscure reason, perl won't pick up the replaced sv, so we don't need to
+     * bother with scanning ahead in the linestr.
+     */
     if (strnEQ (PL_parser->bufptr, SvPV_nolen (name), SvCUR (name))) {
         char *s = PL_parser->bufptr;
         s += SvCUR (name);
