@@ -111,6 +111,18 @@ check_alias (pTHX_ OP *op, void *cb)
             break;
     }
 
+    if (strnEQ (PL_parser->bufptr, SvPV_nolen (name), SvCUR (name))) {
+        char *s = PL_parser->bufptr;
+        s += SvCUR (name);
+        while (s < PL_parser->bufend && isSPACE(*s)) {
+            s++;
+        }
+
+        if ((PL_parser->bufend - s) >= 2 && strnEQ(s, "=>", 2)) {
+            return op;
+        }
+    }
+
     replacement = invoke_callback (aTHX_ cb, name);
     if (!SvTRUE (replacement)) {
         SvREFCNT_dec (replacement);
