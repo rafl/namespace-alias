@@ -9,6 +9,7 @@
 #include "stolen_chunk_of_op.h"
 
 #define MG_UNSTRICT ((U16) (0xaffe))
+#define enabled(u) S_enabled (aTHX_ u)
 
 typedef struct user_data_St {
     char *file;
@@ -89,15 +90,26 @@ tagged (OP *op)
     return 0;
 }
 
+STATIC int
+S_enabled (pTHX_ user_data_t *ud)
+{
+    char *file = CopFILE (PL_curcop);
+
+    if (file && strEQ (file, ud->file)) {
+        return 1;
+    }
+
+    return 0;
+}
+
 STATIC OP *
 check_alias (pTHX_ OP *op, void *user_data)
 {
     user_data_t *ud = (user_data_t *)user_data;
-    char *file = CopFILE (PL_curcop);
     SV *name = cSVOPx (op)->op_sv;
     SV *replacement;
 
-    if (!file || strNE (file, ud->file)) {
+    if (!enabled (ud)) {
         return op;
     }
 
