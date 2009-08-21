@@ -178,6 +178,10 @@ PROTOTYPES: DISABLE
 hook_op_check_id
 setup (class, cb)
         SV *cb
+    INIT:
+        if (!SvROK (cb) || SvTYPE (SvRV (cb)) != SVt_PVCV) {
+            croak ("callback is not a code reference");
+        }
     CODE:
         real_peep = namespace_alias_peep;
         PL_peepp = peep_unstrict;
