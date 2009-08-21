@@ -10,6 +10,11 @@
 
 #define MG_UNSTRICT ((U16) (0xaffe))
 
+typedef struct user_data_St {
+    char *file;
+    SV *cb;
+} user_data_t;
+
 STATIC void (*real_peep) (pTHX_ OP *);
 
 STATIC SV *
@@ -85,10 +90,16 @@ tagged (OP *op)
 }
 
 STATIC OP *
-check_alias (pTHX_ OP *op, void *cb)
+check_alias (pTHX_ OP *op, void *user_data)
 {
+    user_data_t *ud = (user_data_t *)user_data;
+    char *file = CopFILE (PL_curcop);
     SV *name = cSVOPx (op)->op_sv;
     SV *replacement;
+
+    if (!file || strNE (file, ud->file)) {
+        return op;
+    }
 
     if (!SvPOK (name)) {
         return op;
@@ -133,7 +144,7 @@ check_alias (pTHX_ OP *op, void *cb)
         }
     }
 
-    replacement = invoke_callback (aTHX_ cb, name);
+    replacement = invoke_callback (aTHX_ ud->cb, name);
     if (!SvTRUE (replacement)) {
         SvREFCNT_dec (replacement);
         return op;
@@ -176,21 +187,33 @@ MODULE = namespace::alias  PACKAGE = namespace::alias
 PROTOTYPES: DISABLE
 
 hook_op_check_id
-setup (class, cb)
+setup (class, file, cb)
+        char *file
         SV *cb
+    PREINIT:
+        user_data_t *ud;
     INIT:
         if (!SvROK (cb) || SvTYPE (SvRV (cb)) != SVt_PVCV) {
             croak ("callback is not a code reference");
         }
+
+        Newx (ud, 1, user_data_t);
+        ud->file = strdup (file);
+        ud->cb = newSVsv (cb);
     CODE:
         real_peep = namespace_alias_peep;
         PL_peepp = peep_unstrict;
-        RETVAL = hook_op_check (OP_CONST, check_alias, newSVsv (cb));
+        RETVAL = hook_op_check (OP_CONST, check_alias, ud);
     OUTPUT:
         RETVAL
 
 void
 teardown (class, hook)
         hook_op_check_id hook
+    PREINIT:
+        user_data_t *ud;
     CODE:
-        SvREFCNT_dec (hook_op_check_remove (OP_CONST, hook));
+        ud = (user_data_t *)hook_op_check_remove (OP_CONST, hook);
+        SvREFCNT_dec (ud->cb);
+        free (ud->file);
+        Safefree (ud);

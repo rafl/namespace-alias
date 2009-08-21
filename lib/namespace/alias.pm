@@ -17,7 +17,9 @@ sub import {
     ($alias) = $package =~ /::(\w+)$/
         unless defined $alias;
 
-    my $hook = $class->setup(sub {
+    my $file = (caller)[1];
+
+    my $hook = $class->setup($file => sub {
         my ($str) = @_;
 
         if ($str =~ s/^$alias\b/$package/) {

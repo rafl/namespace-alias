@@ -23,15 +23,11 @@ is MyAlias::foo, 'myalias';
     is MyAlias::foo(), 'baz';
 
     is SomeModule::call_alias, 'myalias';
+    is SomeModule::call_alias_paren, 'myalias';
 
     TODO: {
         local $TODO = 'unimplemented';
         is MyAlias::foo, 'baz';
-    }
-
-    TODO: {
-        local $TODO = 'we are still leaking into require';
-        is SomeModule::call_alias_paren, 'myalias';
     }
 }
 
