@@ -26,6 +26,10 @@
 #define PL_madskills 0
 #endif
 
+#ifndef CopARYBASE_get
+#define CopARYBASE_get(c) (c->cop_arybase)
+#endif
+
 STATIC void
 S_no_bareword_allowed(pTHX_ const OP *o)
 {
@@ -595,6 +599,7 @@ namespace_alias_peep(pTHX_ register OP *o)
 	    break;
 	}
 
+#if (PERL_BCDVERSION >= 0x5008009)
 	case OP_SASSIGN: {
 	    OP *rv2gv;
 	    UNOP *refgen, *rv2cv;
@@ -638,6 +643,7 @@ namespace_alias_peep(pTHX_ register OP *o)
 
 	    break;
 	}
+#endif
 
 	
 	case OP_QR:
