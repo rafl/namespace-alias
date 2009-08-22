@@ -2,7 +2,12 @@
 #include "perl.h"
 #include "XSUB.h"
 
+#define NEED_PL_parser
 #include "ppport.h"
+
+#if (PERL_BCDVERSION >= 0x5009005)
+#define PL_lex_inwhat (PL_parser->lex_inwhat)
+#endif
 
 #include "hook_op_check.h"
 
@@ -137,11 +142,11 @@ check_alias (pTHX_ OP *op, void *user_data)
         return op;
     }
 
-    if (PL_parser->lex_stuff) {
+    if (PL_lex_stuff) {
         return op;
     }
 
-    switch (PL_parser->lex_inwhat) {
+    switch (PL_lex_inwhat) {
         case OP_QR:
         case OP_MATCH:
         case OP_SUBST:
@@ -164,14 +169,14 @@ check_alias (pTHX_ OP *op, void *user_data)
      * obscure reason, perl won't pick up the replaced sv, so we don't need to
      * bother with scanning ahead in the linestr.
      */
-    if (strnEQ (PL_parser->bufptr, SvPV_nolen (name), SvCUR (name))) {
-        char *s = PL_parser->bufptr;
+    if (strnEQ (PL_bufptr, SvPV_nolen (name), SvCUR (name))) {
+        char *s = PL_bufptr;
         s += SvCUR (name);
-        while (s < PL_parser->bufend && isSPACE(*s)) {
+        while (s < PL_bufend && isSPACE(*s)) {
             s++;
         }
 
-        if ((PL_parser->bufend - s) >= 2 && strnEQ(s, "=>", 2)) {
+        if ((PL_bufend - s) >= 2 && strnEQ(s, "=>", 2)) {
             return op;
         }
     }
@@ -195,7 +200,7 @@ peep_unstrict (pTHX_ OP *first_op)
 {
     OP *op;
 
-    if (!first_op || first_op->op_opt) {
+    if (!first_op || NCA_OP_OPT(first_op)) {
         return;
     }
 

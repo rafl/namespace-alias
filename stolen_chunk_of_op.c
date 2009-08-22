@@ -2,6 +2,15 @@
 #include "EXTERN.h"
 #include "perl.h"
 
+/* work around a ppport.h bug, or what i think is one anyway */
+#ifndef warner
+#define warner 42
+#endif
+
+#include "ppport.h"
+
+#include "stolen_chunk_of_op.h"
+
 #define CALL_PEEP(o) CALL_FPTR(PL_peepp)(aTHX_ o)
 
 #define PERL_ARGS_ASSERT_NO_BAREWORD_ALLOWED \
@@ -11,6 +20,10 @@
 #define no_bareword_allowed S_no_bareword_allowed
 #else
 #define no_bareword_allowed(a) S_no_bareword_allowed(aTHX_ a)
+#endif
+
+#if (PERL_VERSION < 10)
+#define PL_madskills 0
 #endif
 
 STATIC void
@@ -36,17 +49,17 @@ namespace_alias_peep(pTHX_ register OP *o)
     dVAR;
     register OP* oldop = NULL;
 
-    if (!o || o->op_opt)
+    if (!o || NCA_OP_OPT(o))
 	return;
     ENTER;
     SAVEOP();
     SAVEVPTR(PL_curcop);
     for (; o; o = o->op_next) {
-	if (o->op_opt)
+	if (NCA_OP_OPT(o))
 	    break;
 	/* By default, this op has now been optimised. A couple of cases below
 	   clear this again.  */
-	o->op_opt = 1;
+	NCA_OP_OPT(o) = 1;
 	PL_op = o;
 	switch (o->op_type) {
 	case OP_SETSTATE:
@@ -129,7 +142,7 @@ namespace_alias_peep(pTHX_ register OP *o)
 	       has already occurred. This doesn't fix the real problem,
 	       though (See 20010220.007). AMS 20010719 */
 	    /* op_seq functionality is now replaced by op_opt */
-	    o->op_opt = 0;
+	    NCA_OP_OPT(o) = 0;
 	    /* FALL THROUGH */
 	case OP_SCALAR:
 	case OP_LINESEQ:
@@ -137,7 +150,7 @@ namespace_alias_peep(pTHX_ register OP *o)
 	nothin:
 	    if (oldop && o->op_next) {
 		oldop->op_next = o->op_next;
-		o->op_opt = 0;
+		NCA_OP_OPT(o) = 0;
 		continue;
 	    }
 	    break;
@@ -218,13 +231,15 @@ namespace_alias_peep(pTHX_ register OP *o)
 	case OP_GREPWHILE:
 	case OP_AND:
 	case OP_OR:
+#ifdef OP_DOR
 	case OP_DOR:
+	case OP_DORASSIGN:
+	case OP_ONCE:
+#endif
 	case OP_ANDASSIGN:
 	case OP_ORASSIGN:
-	case OP_DORASSIGN:
 	case OP_COND_EXPR:
 	case OP_RANGE:
-	case OP_ONCE:
 	    while (cLOGOP->op_other->op_type == OP_NULL)
 		cLOGOP->op_other = cLOGOP->op_other->op_next;
 	    CALL_PEEP(cLOGOP->op_other); /* Recursive calls are not replaced by fptr calls */
@@ -245,11 +260,11 @@ namespace_alias_peep(pTHX_ register OP *o)
 
 	case OP_SUBST:
 	    assert(!(cPMOP->op_pmflags & PMf_ONCE));
-	    while (cPMOP->op_pmstashstartu.op_pmreplstart &&
-		   cPMOP->op_pmstashstartu.op_pmreplstart->op_type == OP_NULL)
-		cPMOP->op_pmstashstartu.op_pmreplstart
-		    = cPMOP->op_pmstashstartu.op_pmreplstart->op_next;
-	    CALL_PEEP(cPMOP->op_pmstashstartu.op_pmreplstart);
+	    while (NCA_PMOP_STASHSTARTU(cPMOP) &&
+		   NCA_PMOP_STASHSTARTU(cPMOP)->op_type == OP_NULL)
+		NCA_PMOP_STASHSTARTU(cPMOP)
+		    = NCA_PMOP_STASHSTARTU(cPMOP)->op_next;
+	    CALL_PEEP(NCA_PMOP_STASHSTARTU(cPMOP));
 	    break;
 
 	case OP_EXEC:
@@ -628,7 +643,7 @@ namespace_alias_peep(pTHX_ register OP *o)
 	case OP_QR:
 	case OP_MATCH:
 	    if (!(cPMOP->op_pmflags & PMf_ONCE)) {
-		assert (!cPMOP->op_pmstashstartu.op_pmreplstart);
+		assert (!NCA_PMOP_STASHSTARTU(cPMOP));
 	    }
 	    break;
 	}
