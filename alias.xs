@@ -274,6 +274,8 @@ check_entersub (pTHX_ OP *op, void *user_data)
         return op;
     }
 
+    op_free (op);
+
     return newSVOP (OP_CONST, 0, replacement);
 }
 
