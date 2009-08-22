@@ -9,11 +9,15 @@
 #include "stolen_chunk_of_op.h"
 
 #define MG_UNSTRICT ((U16) (0xaffe))
+#define MG_UNCALL   ((U16) (0xafff))
+
 #define enabled(u) S_enabled (aTHX_ u)
 
 typedef struct user_data_St {
     char *file;
     SV *cb;
+    hook_op_check_id gv;
+    hook_op_check_id entersub;
 } user_data_t;
 
 STATIC void (*real_peep) (pTHX_ OP *);
@@ -50,27 +54,40 @@ invoke_callback (pTHX_ SV *cb, SV *name)
 }
 
 STATIC void
-tag (OP *op)
+tag (OP *op, int type, void *data)
 {
     SV *sv;
     MAGIC *mg;
 
-    assert (op->op_type == OP_CONST);
+    assert (op->op_type == OP_CONST || op->op_type == OP_GV);
 
-    sv = cSVOPx (op)->op_sv;
+    if (op->op_type == OP_CONST) {
+        sv = cSVOPx (op)->op_sv;
+    }
+    else {
+        sv = (SV *)cGVOPx_gv (op);
+    }
+
     mg = sv_magicext (sv, NULL, PERL_MAGIC_ext, NULL, NULL, 0);
-    mg->mg_private = MG_UNSTRICT;
+    mg->mg_private = type;
+    mg->mg_ptr = data;
 }
 
 STATIC int
-tagged (OP *op)
+tagged (OP *op, int type, void **data)
 {
     SV *sv;
     MAGIC *mg;
 
-    assert (op->op_type == OP_CONST);
+    assert (op->op_type == OP_CONST || op->op_type == OP_GV);
 
-    sv = cSVOPx (op)->op_sv;
+    if (op->op_type == OP_CONST) {
+        sv = cSVOPx (op)->op_sv;
+    }
+    else {
+        sv = (SV *)cGVOPx_gv (op);
+    }
+
     if (SvTYPE (sv) < SVt_PVMG) {
         return 0;
     }
@@ -78,7 +95,10 @@ tagged (OP *op)
     for (mg = SvMAGIC (sv); mg; mg = mg->mg_moremagic) {
         switch (mg->mg_type) {
             case PERL_MAGIC_ext:
-                if (mg->mg_private == MG_UNSTRICT) {
+                if (mg->mg_private == type) {
+                    if (data) {
+                        *data = mg->mg_ptr;
+                    }
                     return 1;
                 }
                 break;
@@ -165,7 +185,7 @@ check_alias (pTHX_ OP *op, void *user_data)
     SvREFCNT_dec (name);
     cSVOPx (op)->op_sv = replacement;
 
-    tag (op);
+    tag (op, MG_UNSTRICT, NULL);
 
     return op;
 }
@@ -182,7 +202,7 @@ peep_unstrict (pTHX_ OP *first_op)
     for (op = first_op; op; op = op->op_next) {
         switch (op->op_type) {
             case OP_CONST:
-                if (tagged (op)) {
+                if (tagged (op, MG_UNSTRICT, NULL)) {
                     op->op_private &= ~OPpCONST_STRICT;
                 }
                 break;
@@ -192,6 +212,69 @@ peep_unstrict (pTHX_ OP *first_op)
     }
 
     real_peep (aTHX_ first_op);
+}
+
+STATIC OP *
+check_gv (pTHX_ OP *op, void *user_data)
+{
+    user_data_t *ud = (user_data_t *)user_data;
+    GV *gv;
+    SV *name, *replacement;
+
+    if (!enabled (ud)) {
+        return op;
+    }
+
+    gv = cGVOPx_gv (op);
+    if (!gv || !GvSTASH (gv)) {
+        return op;
+    }
+
+    name = newSVpv (HvNAME (GvSTASH (gv)), 0);
+    sv_catpvs (name, "::");
+    sv_catpv (name, GvNAME (gv));
+
+    replacement = invoke_callback (aTHX_ ud->cb, name);
+    if (!SvTRUE (replacement)) {
+        SvREFCNT_dec (replacement);
+        return op;
+    }
+
+    tag (op, MG_UNCALL, replacement);
+
+    return op;
+}
+
+STATIC OP *
+check_entersub (pTHX_ OP *op, void *user_data)
+{
+    user_data_t *ud = (user_data_t *)user_data;
+    OP *prev = ((cUNOPx (op)->op_first->op_sibling)
+        ? cUNOPx (op) : ((UNOP *)cUNOPx (op)->op_first))->op_first;
+    OP *op2 = prev->op_sibling;
+    OP *cvop, *gvop;
+    SV *replacement;
+
+    if (!enabled (ud)) {
+        return op;
+    }
+
+    for (cvop = op2; cvop->op_sibling; cvop = cvop->op_sibling) ;
+
+    if (cvop->op_type != OP_NULL) {
+        return op;
+    }
+
+    gvop = cUNOPx (cvop)->op_first;
+    if (gvop->op_type != OP_GV) {
+        return op;
+    }
+
+    if (!tagged (gvop, MG_UNCALL, (void **)&replacement)) {
+        return op;
+    }
+
+    return newSVOP (OP_CONST, 0, replacement);
 }
 
 MODULE = namespace::alias  PACKAGE = namespace::alias
@@ -215,6 +298,8 @@ setup (class, file, cb)
     CODE:
         real_peep = namespace_alias_peep;
         PL_peepp = peep_unstrict;
+        ud->entersub = hook_op_check (OP_ENTERSUB, check_entersub, ud);
+        ud->gv = hook_op_check (OP_GV, check_gv, ud);
         RETVAL = hook_op_check (OP_CONST, check_alias, ud);
     OUTPUT:
         RETVAL
@@ -226,6 +311,8 @@ teardown (class, hook)
         user_data_t *ud;
     CODE:
         ud = (user_data_t *)hook_op_check_remove (OP_CONST, hook);
+        (void)hook_op_check_remove (OP_GV, ud->gv);
+        (void)hook_op_check_remove (OP_ENTERSUB, ud->entersub);
         SvREFCNT_dec (ud->cb);
         free (ud->file);
         Safefree (ud);

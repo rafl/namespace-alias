@@ -25,10 +25,7 @@ is MyAlias::foo, 'myalias';
     is SomeModule::call_alias, 'myalias';
     is SomeModule::call_alias_paren, 'myalias';
 
-    TODO: {
-        local $TODO = 'unimplemented';
-        is MyAlias::foo, 'baz';
-    }
+    is MyAlias::foo, 'Foo::Bar::Baz::foo';
 }
 
 is MyAlias::foo, 'myalias';
