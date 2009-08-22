@@ -5,6 +5,7 @@ package namespace::alias;
 
 use 5.008008;
 use XSLoader;
+use Class::MOP;
 use B::Hooks::OP::Check;
 use B::Hooks::EndOfScope;
 
@@ -14,6 +15,8 @@ XSLoader::load(__PACKAGE__, $VERSION);
 
 sub import {
     my ($class, $package, $alias) = @_;
+
+    Class::MOP::load_class($package);
 
     ($alias) = $package =~ /(?:::|')(\w+)$/
         unless defined $alias;
