@@ -14,7 +14,7 @@ XSLoader::load(__PACKAGE__, $VERSION);
 sub import {
     my ($class, $package, $alias) = @_;
 
-    ($alias) = $package =~ /::(\w+)$/
+    ($alias) = $package =~ /(?:::|')(\w+)$/
         unless defined $alias;
 
     my $file = (caller)[1];
