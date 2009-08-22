@@ -3,6 +3,7 @@ use warnings;
 
 package namespace::alias;
 
+use 5.008008;
 use XSLoader;
 use B::Hooks::OP::Check;
 use B::Hooks::EndOfScope;
