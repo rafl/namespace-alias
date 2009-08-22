@@ -51,10 +51,10 @@ namespace::alias - Lexical aliasing of namespaces
   use namespace::alias 'My::Company::Namespace::Customer';
 
   # plain aliasing of a namespace
-  my $cust = Customer->new;            # My::Company::Namespace::Customer->new
+  my $cust = Customer->new;  # My::Company::Namespace::Customer->new
 
   # namespaces relative to the alias
-  my $pref = Customer::Preferred->new; # My::Company::Namespace::Customer::Preferred->new
+  my $pref = Customer::Preferred->new;  # My::Company::Namespace::Customer::Preferred->new
 
   # getting the expansion of an alias
   my $customer_class = Customer;
@@ -64,6 +64,60 @@ namespace::alias - Lexical aliasing of namespaces
 
   # calling a function in an aliased namespace
   Customer::some_func()
+
+=head1 DESCRIPTION
+
+This module allows you to load packages and use them with a shorter name within
+a lexical scope.
+
+This is how you load a module and install an alias for it:
+
+  use namespace::alias 'Some::Class';
+
+This will load C<Some::Class> and install the alias C<Class> for it. You may
+also specify the name of the alias explicitly:
+
+  use namespace::alias 'Some::Class', 'MyAlias';
+
+This will load C<Some::Class> and install the alias C<MyAlias> for it.
+
+After installing the alias, every method or function call using it will be
+expanded to the full namespace. Addressing namespaces relative to the aliased
+namespace is also possible:
+
+  MyAlias::Bar->new; # this expands to Some::Class::Bar->new
+
+Aliases may also used as barewords. They will expand to a string with the full namespace:
+To load a module and install an alias for it, do
+
+  my $foo = MyAlias;       # 'Some::Class'
+  my $bar = MyAlias::Bar;  # 'Some::Class::Bar'
+
+This also means that function calls to aliased namespaces B<need> to be
+followed with parens. If they aren't, they're expanded to strings instead.
+
+  MyAlias::some_func();
+  MyAlias::Bar::some_func();
+
+Also note that the created aliases are lexical and available at compile-time
+only. They may also shadow existing packages for the scope they are installed in:
+
+  {
+      package Foo::Bar;
+      sub baz { 0xaffe }
+
+      package Baz;
+      sub baz { 42 }
+  }
+
+  Baz::baz(); # 42
+
+  {
+      use namespace::alias 'Foo::Bar', 'Baz';
+      Baz::baz(); # 0xaffe
+  }
+
+  Bar::baz(); # 42
 
 =head1 SEE ALSO
 
