@@ -48,10 +48,22 @@ namespace::alias - Foo
 
 =head1 SYNOPSIS
 
-use namespace::alias 'My::Company::Namespace::Customer';
+  use namespace::alias 'My::Company::Namespace::Customer';
 
-my $cust = Customer->new;            # My::Company::Namespace::Customer->new
-my $pref = Customer::Preferred->new; # My::Company::Namespace::Customer::Preferred->new
+  # plain aliasing of a namespace
+  my $cust = Customer->new;            # My::Company::Namespace::Customer->new
+
+  # namespaces relative to the alias
+  my $pref = Customer::Preferred->new; # My::Company::Namespace::Customer::Preferred->new
+
+  # getting the expansion of an alias
+  my $customer_class = Customer;
+
+  # also works for packages relative to the alias
+  my $preferred_class = Customer::Preferred;
+
+  # calling a function in an aliased namespace
+  Customer::some_func()
 
 =head1 SEE ALSO
 
