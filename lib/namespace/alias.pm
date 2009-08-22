@@ -44,7 +44,7 @@ __END__
 
 =head1 NAME
 
-namespace::alias - Foo
+namespace::alias - Lexical aliasing of namespaces
 
 =head1 SYNOPSIS
 
