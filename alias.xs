@@ -25,8 +25,6 @@ typedef struct user_data_St {
     hook_op_check_id entersub;
 } user_data_t;
 
-STATIC void (*real_peep) (pTHX_ OP *);
-
 STATIC SV *
 invoke_callback (pTHX_ SV *cb, SV *name)
 {
@@ -216,7 +214,7 @@ peep_unstrict (pTHX_ OP *first_op)
         }
     }
 
-    real_peep (aTHX_ first_op);
+    namespace_alias_peep (aTHX_ first_op);
 }
 
 STATIC OP *
@@ -303,7 +301,6 @@ setup (class, file, cb)
         ud->file = strdup (file);
         ud->cb = newSVsv (cb);
     CODE:
-        real_peep = namespace_alias_peep;
         PL_peepp = peep_unstrict;
         ud->entersub = hook_op_check (OP_ENTERSUB, check_entersub, ud);
         ud->gv = hook_op_check (OP_GV, check_gv, ud);
