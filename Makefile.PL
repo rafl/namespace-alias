@@ -20,7 +20,6 @@ test_requires 'Test::More' => '0.88';
 
 my $pkg = ExtUtils::Depends->new('namespace::alias', 'B::Hooks::OP::Check');
 $pkg->add_xs('alias.xs');
-$pkg->add_c('stolen_chunk_of_op.c');
 $pkg->add_pm('lib/namespace/alias.pm' => '$(INST_LIB)/namespace/alias.pm');
 
 makemaker_args($pkg->get_makefile_vars);
