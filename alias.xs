@@ -339,7 +339,6 @@ setup (class, file, cb)
         ud->file = strdup (file);
         ud->cb = newSVsv (cb);
     CODE:
-        PL_peepp = peep_unstrict;
         ud->entersub = hook_op_check (OP_ENTERSUB, check_entersub, ud);
         ud->gv = hook_op_check (OP_GV, check_gv, ud);
         RETVAL = hook_op_check (OP_CONST, check_alias, ud);
@@ -361,3 +360,4 @@ teardown (class, hook)
 
 BOOT:
     orig_peep = PL_peepp;
+    PL_peepp = peep_unstrict;
