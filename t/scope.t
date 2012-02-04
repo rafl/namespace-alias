@@ -13,21 +13,18 @@ use lib "$FindBin::Bin/lib";
     sub foo { 'myalias' }
 }
 
-is MyAlias::foo, 'myalias';
+is MyAlias::foo(), 'myalias';
 
 {
     use namespace::alias 'Foo::Bar::Baz', 'MyAlias';
 
     use SomeModule;
 
-    is MyAlias::foo(), 'baz';
-
-    is SomeModule::call_alias, 'myalias';
     is SomeModule::call_alias_paren, 'myalias';
 
-    is MyAlias::foo, 'Foo::Bar::Baz::foo';
+    is MyAlias::foo(), 'baz';
 }
 
-is MyAlias::foo, 'myalias';
+is MyAlias::foo(), 'myalias';
 
 done_testing;

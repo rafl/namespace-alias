@@ -117,7 +117,15 @@ only. They may also shadow existing packages for the scope they are installed in
       Baz::baz(); # 0xaffe
   }
 
-  Bar::baz(); # 42
+  Baz::baz(); # 42
+
+=head1 BUGS
+
+Subroutine calls without parentheses around the argument list (e.g.,
+C<Baz::baz> rather than C<Baz::baz()>), on names that work through
+aliases, generally don't work on Perls prior to 5.11.2.  From Perl
+5.11.2 onwards, aliases match the behaviour of ordinary package names
+much better.
 
 =head1 SEE ALSO
 
