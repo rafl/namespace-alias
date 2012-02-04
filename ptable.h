@@ -53,7 +53,7 @@
 #endif
 
 #ifndef PTABLE_VAL_FREE
-# define PTABLE_VAL_FREE(V)
+# define PTABLE_VAL_FREE(V) ((void) (V))
 #endif
 
 #ifndef PTABLE_JOIN
