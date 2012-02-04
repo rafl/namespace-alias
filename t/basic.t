@@ -36,6 +36,27 @@ is MyAlias->met(), 'Foo::Bar::Baz', 'aliased method call';
 is Baz::fun(), 'fun', 'default aliased function call';
 is Baz->met(), 'Foo::Bar::Baz', 'default aliased method call';
 
+SKIP: {
+    skip "no-paren sub calls are unaliasable on this perl", 6
+        unless "$]" >= 5.011002;
+    eval q{
+        use namespace::alias 'Foo::Bar::Baz', 'MyAlias';
+        use namespace::alias 'Foo::Bar::Baz';
+        is MyAlias::fun, 'fun', 'aliased no-paren function call';
+        is Baz::fun, 'fun', 'default aliased no-paren function call';
+    };
+    is $@, "";
+    eval q{
+        use namespace::alias 'Foo::Bar::Baz', 'MyAlias';
+        use namespace::alias 'Foo::Bar::Baz';
+        my $x = MyAlias::fun 1;
+        is $x, 'fun', 'aliased no-paren with-arg function call';
+        my $y = Baz::fun 1;
+        is $y, 'fun', 'default aliased no-paren with-arg function call';
+    };
+    is $@, "";
+}
+
 # might this be possible?
 sub giveback { $_[0] }
 is giveback(MyAlias), 'Foo::Bar::Baz', 'aliased bareword';
