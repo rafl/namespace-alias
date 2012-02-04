@@ -194,8 +194,13 @@ check_alias (pTHX_ OP *op, void *user_data)
         return op;
     }
 
-    SvREFCNT_dec (name);
-    cSVOPx (op)->op_sv = replacement;
+    /*
+     * Modify name in place rather than putting replacement into the op
+     * in its stead, because the core (5.11.2+) may be relying on the
+     * name SV living in order to put it into another op.
+     */
+    sv_setsv(name, replacement);
+    SvREFCNT_dec(replacement);
 
     tag (op, MG_UNSTRICT, NULL);
 
